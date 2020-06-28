@@ -26,7 +26,7 @@ object CPMDemo {
 
 
     val s: Array[Set[VertexId]] = communities.collect()
-    spark.stop()
+
 
     println("********************************************************************")
     println(s.length)

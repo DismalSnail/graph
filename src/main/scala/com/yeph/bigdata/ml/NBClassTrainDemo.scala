@@ -23,6 +23,6 @@ object NBClassTrainDemo {
 
     df1.join(df2,udf_insert(df1.col("key"),df2.col("key"))).show()
     case class Person(name: String, age: Long)
-    Seq(Person("tom",21L)).toDS()
+
   }
 }

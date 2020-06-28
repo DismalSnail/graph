@@ -1,14 +1,14 @@
 package com.yeph.bigdata.dga.cpm
 
-import org.apache.spark.SparkContext
-import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.graphx.{Edge, EdgeDirection, Graph, VertexId, VertexRDD}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.expressions.UserDefinedFunction
+import org.apache.spark.sql.functions.udf
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.collection.mutable
 
-class CliquePercolationMethod(spark:SparkSession) {
+class CliquePercolationMethod(spark: SparkSession) {
 
   def run(graph: Graph[Char, Char], k: Int): RDD[Set[VertexId]] = {
     val clique: RDD[Set[VertexId]] = TSMaximalCliqueEnumerate(graph)
@@ -18,23 +18,18 @@ class CliquePercolationMethod(spark:SparkSession) {
   def community(clique: RDD[Set[VertexId]], k: Int): RDD[Set[VertexId]] = {
     val vertex: RDD[(VertexId, Set[VertexId])] = clique.filter(set => set.size >= k).zipWithUniqueId().map(s => (s._2, s._1))
 
-    val vertexBroadcast: Broadcast[collection.Map[VertexId, Set[VertexId]]] = spark.sparkContext.broadcast(vertex.collectAsMap())
-//    val edge: RDD[Edge[Char]] = vertex.cartesian(vertex).filter {
-//      case (src, dst) => {
-//        (src._2 & dst._2).size >= k - 1 && dst._1 != src._1
-//      }
-//    }.map(e => Edge(e._1._1, e._2._1, 1))
+    val verDF: DataFrame = spark.createDataFrame(vertex.map(v => (v._1,v._2.toArray))).toDF("id", "key")
+    spark.udf.register("udf_insert", udf_insert)
+ verDF.createOrReplaceTempView("vertex")
+    def udf_insert: UserDefinedFunction = udf((a: Seq[Long], b: Seq[Long]) => (a.toSet & b.toSet).size >= k - 1)
+
+    val edge: RDD[Edge[Char]] = spark.sql("select t0.id as src,t1.id as dst  from" +
+      "  vertex t0 " +
+      " join vertex t1 on udf_insert(t0.key,t1.key)==true and t0.id < t1.id").
+      rdd.
+      map(e => Edge(e.getLong(0), e.getLong(1), '1'))
 
 
-
-    val edge: RDD[Edge[Char]] = vertex.mapPartitions({ iter =>
-      val m: collection.Map[VertexId, Set[VertexId]] = vertexBroadcast.value
-      for {
-        vRDD <- iter
-        v <- m
-        if (vRDD._2 & v._2).size >= k - 1 && vRDD._1 != v._1
-      } yield if (vRDD._1 > v._1) Edge(v._1, vRDD._1, '1') else Edge(vRDD._1, v._1, '1')
-    }).distinct()
 
     val graph: Graph[Set[VertexId], Char] = Graph(vertex, edge)
 
