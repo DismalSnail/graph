@@ -39,7 +39,7 @@ object CPMDemo {
     }
 
     writer.close()
-
+  print("x")
     spark.close()
   }
 
