@@ -5,6 +5,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 object CentralityDemo {
 
@@ -175,7 +176,7 @@ object CentralityDemo {
   }
 
   def main(args: Array[String]): Unit = {
-
+    ClassTag
   }
 
 }

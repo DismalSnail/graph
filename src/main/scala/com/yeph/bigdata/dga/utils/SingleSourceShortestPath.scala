@@ -1,9 +1,6 @@
 package com.yeph.bigdata.dga.utils
 
-import org.apache.spark.graphx.Graph
+class SingleSourceShortestPath[T] {
 
-class SingleSourceShortestPath {
-  val directed:Boolean = false
-  val weighted:Boolean = false
-
+ def p() = print("ssss")
 }
